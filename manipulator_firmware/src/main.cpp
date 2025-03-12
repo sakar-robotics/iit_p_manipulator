@@ -1,117 +1,125 @@
 #include <Arduino.h>
+
 #include "FastAccelStepper.h"
+#include "StepperModule.h"
+#include "configuration.h"
 
-#define dirPinStepper1 42
-#define stepPinStepper1 41
-
-#define dirPinStepper2 39
-#define stepPinStepper2 40
-
-#define dirPinStepper3 18
-#define stepPinStepper3 17
-
-#define dirPinStepper4 8
-#define stepPinStepper4 3
-
-#define microsteps 1600
-
+// Global instance of FastAccelStepperEngine
 FastAccelStepperEngine engine = FastAccelStepperEngine();
-FastAccelStepper *stepper1 = NULL;
-FastAccelStepper *stepper2 = NULL;
-FastAccelStepper *stepper3 = NULL;
-FastAccelStepper *stepper4 = NULL;
+
+// Use an array to store a fixed number of stepper module pointers.
+StepperModule * motors[MOTOR_COUNT];
+
+// For clarity, Map each motor to its role by index:
+enum MotorRoles
+{
+  BASE = 0,
+  SHOULDER,
+  ELBOW,
+  WRIST1,
+  WRIST2,
+  WRIST3
+};
 
 void setup()
 {
   Serial.begin(115200);
+
   engine.init();
 
-  // Attach stepper 1
-  stepper1 = engine.stepperConnectToPin(stepPinStepper1, DRIVER_RMT);
-  if (stepper1)
-  {
-    stepper1->setDirectionPin(dirPinStepper1);
-    stepper1->setSpeedInHz(800);
-    stepper1->setAcceleration(800);
-  }
+  // Create and initialize each stepper module
+  // .Base motor
+  motors[BASE] = new StepperModule(baseMotorConfig.stepPin,
+                                   baseMotorConfig.dirPin,
+                                   baseMotorConfig.stepsPerRev,
+                                   baseMotorConfig.gearRatio,
+                                   baseMotorConfig.minAngle,
+                                   baseMotorConfig.maxAngle,
+                                   baseMotorConfig.velocityMax,
+                                   baseMotorConfig.accelerationMax);
+  motors[BASE]->init(&engine);
 
-  // Attach stepper 2
-  stepper2 = engine.stepperConnectToPin(stepPinStepper2, DRIVER_RMT);
-  if (stepper2)
-  {
-    stepper2->setDirectionPin(dirPinStepper2);
-    stepper2->setSpeedInHz(800);
-    stepper2->setAcceleration(800);
-  }
+  // .Shoulder motor
+  motors[SHOULDER] = new StepperModule(shoulderMotorConfig.stepPin,
+                                       shoulderMotorConfig.dirPin,
+                                       shoulderMotorConfig.stepsPerRev,
+                                       shoulderMotorConfig.gearRatio,
+                                       shoulderMotorConfig.minAngle,
+                                       shoulderMotorConfig.maxAngle,
+                                       shoulderMotorConfig.velocityMax,
+                                       shoulderMotorConfig.accelerationMax);
+  motors[SHOULDER]->init(&engine);
 
-  // Attach stepper 3
-  stepper3 = engine.stepperConnectToPin(stepPinStepper3, DRIVER_RMT);
-  if (stepper3)
-  {
-    stepper3->setDirectionPin(dirPinStepper3);
-    stepper3->setSpeedInHz(800);
-    stepper3->setAcceleration(800);
-  }
+  // .Elbow motor
+  motors[ELBOW] = new StepperModule(elbowMotorConfig.stepPin,
+                                    elbowMotorConfig.dirPin,
+                                    elbowMotorConfig.stepsPerRev,
+                                    elbowMotorConfig.gearRatio,
+                                    elbowMotorConfig.minAngle,
+                                    elbowMotorConfig.maxAngle,
+                                    elbowMotorConfig.velocityMax,
+                                    elbowMotorConfig.accelerationMax);
+  motors[ELBOW]->init(&engine);
 
-  // Attach stepper 4
-  stepper4 = engine.stepperConnectToPin(stepPinStepper4, DRIVER_RMT);
-  if (stepper4)
-  {
-    stepper4->setDirectionPin(dirPinStepper4);
-    stepper4->setSpeedInHz(800);
-    stepper4->setAcceleration(800);
-  }
+  // .Wrist1 motor
+  motors[WRIST1] = new StepperModule(wrist1MotorConfig.stepPin,
+                                     wrist1MotorConfig.dirPin,
+                                     wrist1MotorConfig.stepsPerRev,
+                                     wrist1MotorConfig.gearRatio,
+                                     wrist1MotorConfig.minAngle,
+                                     wrist1MotorConfig.maxAngle,
+                                     wrist1MotorConfig.velocityMax,
+                                     wrist1MotorConfig.accelerationMax);
+  motors[WRIST1]->init(&engine);
+
+  // .Wrist2 motor
+  motors[WRIST2] = new StepperModule(wrist2MotorConfig.stepPin,
+                                     wrist2MotorConfig.dirPin,
+                                     wrist2MotorConfig.stepsPerRev,
+                                     wrist2MotorConfig.gearRatio,
+                                     wrist2MotorConfig.minAngle,
+                                     wrist2MotorConfig.maxAngle,
+                                     wrist2MotorConfig.velocityMax,
+                                     wrist2MotorConfig.accelerationMax);
+  motors[WRIST2]->init(&engine);
+
+  // .Wrist3 motor
+  motors[WRIST3] = new StepperModule(wrist3MotorConfig.stepPin,
+                                     wrist3MotorConfig.dirPin,
+                                     wrist3MotorConfig.stepsPerRev,
+                                     wrist3MotorConfig.gearRatio,
+                                     wrist3MotorConfig.minAngle,
+                                     wrist3MotorConfig.maxAngle,
+                                     wrist3MotorConfig.velocityMax,
+                                     wrist3MotorConfig.accelerationMax);
+  motors[WRIST3]->init(&engine);
 }
 
 void loop()
 {
-  // Move all steppers to target position
-  if (stepper1)
-    stepper1->moveTo(microsteps * 2, false);
-  if (stepper2)
-    stepper2->moveTo(microsteps * 2, false);
-  if (stepper3)
-    stepper3->moveTo(microsteps * 2, false);
-  if (stepper4)
-    stepper4->moveTo(microsteps * 2, false);
+  // Sample Target angles for each motor
+  float targetAngles[MOTOR_COUNT] = {45.0, -30.0, 90.0, -90.0, 0.0, 30.0};
 
-  delay(6000);
+  // Command each motor to move its target angle.
+  for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
+    motors[i]->move_to_angle(targetAngles[i]);
+  }
 
-  Serial.print("Stepper 1 position: ");
-  if (stepper1)
-    Serial.println(stepper1->getCurrentPosition());
-  Serial.print("Stepper 2 position: ");
-  if (stepper2)
-    Serial.println(stepper2->getCurrentPosition());
-  Serial.print("Stepper 3 position: ");
-  if (stepper3)
-    Serial.println(stepper3->getCurrentPosition());
-  Serial.print("Stepper 4 position: ");
-  if (stepper4)
-    Serial.println(stepper4->getCurrentPosition());
+  delay(5000);
 
-  // Return all steppers to position 0
-  if (stepper1)
-    stepper1->moveTo(0, false);
-  if (stepper2)
-    stepper2->moveTo(0, false);
-  if (stepper3)
-    stepper3->moveTo(0, false);
-  if (stepper4)
-    stepper4->moveTo(0, false);
+  // Log the current angles
+  Serial.println("Current Motor angles:");
+  for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
+    Serial.print("Motor ");
+    Serial.print(i);
+    Serial.print(" angle: ");
+    Serial.println(motors[i]->get_current_angle());
+  }
 
-  delay(6000);
+  // Return all motors to 0
+    for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
+        motors[i]->move_to_angle(0.0);
+    }
 
-  Serial.print("Stepper 1 position: ");
-  if (stepper1)
-    Serial.println(stepper1->getCurrentPosition());
-  Serial.print("Stepper 2 position: ");
-  if (stepper2)
-    Serial.println(stepper2->getCurrentPosition());
-  Serial.print("Stepper 3 position: ");
-  if (stepper3)
-    Serial.println(stepper3->getCurrentPosition());
-  Serial.print("Stepper 4 position: ");
-  if (stepper4)
-    Serial.println(stepper4->getCurrentPosition());
+    delay(5000);
 }

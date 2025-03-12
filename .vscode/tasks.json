@@ -1,0 +1,87 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "colcon: build symlink (debug)",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && colcon build --symlink-install --event-handlers console_direct+",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "colcon: build (debug)",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && colcon build --event-handlers console_direct+",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "colcon: clean",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && rm -rf build/ install/ log/",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "colcon: test",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && colcon test --event-handlers console_direct+",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "colcon: test-result",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && colcon test-result --all --verbose",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "colcon build : CMAKE_EXPORT_COMPILE_COMMANDS",
+            "type": "shell",
+            "command": "cd ~/manipulator_ws && colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=YES --symlink-install",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "ros2 launch",
+            "type": "shell",
+            "command": "ros2 launch ${input:package_name} ${input:executable}",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+    ],
+    "inputs": [
+        {
+            "id": "package_name",
+            "type": "promptString",
+            "description": "Enter the package name"
+        },
+        {
+            "id": "executable",
+            "type": "promptString",
+            "description": "Enter the executable name"
+        }
+    ]
+}
