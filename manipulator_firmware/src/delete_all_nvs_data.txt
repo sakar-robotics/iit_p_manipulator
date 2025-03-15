@@ -1,0 +1,59 @@
+#include <Arduino.h>
+#include <Preferences.h>
+
+#include "nvs.h"
+#include "nvs_flash.h"
+
+Preferences preferences;
+const char * ns = "xyz";
+
+void setup()
+{
+  Serial.begin(115200);
+
+  Serial.println();
+  Serial.println("ESP32 Preferences and NVS Stats Demo");
+
+  // Initialize NVS flash.
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    nvs_flash_erase();
+    nvs_flash_init();
+  }
+
+  // Erase the entire NVS partition.
+  ret = nvs_flash_erase_partition("nvs");
+  if (ret == ESP_OK) {
+    Serial.println("Erased entire NVS partition for user data.");
+    nvs_flash_init();
+  } else {
+    Serial.println("Failed to erase NVS partition.");
+  }
+
+  // Optional: If you still need to work with a specific namespace, you can open it.
+  //   preferences.begin(ns, false);
+  // You may clear keys specifically if desired.
+  // preferences.clear();
+  // preferences.end();
+
+  // Log the updated NVS statistics.
+  nvs_stats_t stats;
+  ret = nvs_get_stats(NULL, &stats);
+  if (ret == ESP_OK) {
+    Serial.print("Used entries: ");
+    Serial.println(stats.used_entries);
+    Serial.print("Free entries: ");
+    Serial.println(stats.free_entries);
+    Serial.print("Total entries: ");
+    Serial.println(stats.total_entries);
+    Serial.print("Namespace count: ");
+    Serial.println(stats.namespace_count);
+  } else {
+    Serial.println("Failed to get NVS statistics");
+  }
+}
+
+void loop()
+{
+  // The loop can remain empty or log stats continuously if needed.
+}
