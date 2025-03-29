@@ -110,6 +110,16 @@ def opaque_func(context, *args, **kwargs):
     kinematics_config = load_yaml(Path(robot_description_kinematics_file.perform(context)))
     joint_limits_config = load_yaml(Path(joint_limits_file.perform(context)))
 
+    servo_file = PathJoinSubstitution(
+        [
+            FindPackageShare('igus_rebel_moveit_config'),
+            'config',
+            'servo_config.yaml'
+        ]
+    )
+    servo_config = load_yaml(Path(servo_file.perform(context)))
+    servo_params = {'moveit_servo': servo_config}
+
     moveit_args_not_concatenated = [
         {"robot_description": robot_description.perform(context)},
         {"robot_description_semantic": robot_description_semantic.perform(context)},
@@ -163,10 +173,24 @@ def opaque_func(context, *args, **kwargs):
         arguments=["-d", default_rviz_file],
         parameters=rviz_parameters,
     )
+
+    servo_node = Node(
+        condition=IfCondition(LaunchConfiguration('use_servo')),
+        package='moveit_servo',
+        executable='servo_node_main',
+        parameters=[
+            servo_params,
+            {'robot_description': robot_description},
+            {'robot_description_semantic': robot_description_semantic.perform(context)},
+            kinematics_config,
+        ],
+        output='screen'
+    )
     
     return [
         move_group_node,
-        launch_rviz
+        launch_rviz,
+        servo_node
     ]
 
 
@@ -187,11 +211,18 @@ def generate_launch_description():
         description="Which hardware protocol or mock hardware should be used",
     )
 
+    use_servo_arg = DeclareLaunchArgument(
+        "use_servo", 
+        default_value="true",
+        description="Enable moveit_servo node if true"
+    )
+
     ld = LaunchDescription()
     ld.add_action(use_sim_time_arg)
     ld.add_action(namespace_arg)
     ld.add_action(use_gui_arg)
     ld.add_action(hardware_protocol_arg)
+    ld.add_action(use_servo_arg)
 
     ld.add_action(OpaqueFunction(function=opaque_func))
 

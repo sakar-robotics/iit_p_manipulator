@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<library path="libjoystic_servo_component">
+  <class name="igus_moveit_servo::JoyToServo" type="igus_moveit_servo::JoyToServo" base_class_type="rclcpp::Node">
+    <description>Joystick to Servo converter node</description>
+  </class>
+</library>

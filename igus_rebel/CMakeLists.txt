@@ -16,6 +16,10 @@ find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(igus_rebel_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(moveit_msgs REQUIRED)
 
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -55,6 +59,23 @@ install(FILES
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Add executable target for the joystic_servo node
+add_executable(joystic_servo_node src/joystic_servo.cpp)
+
+ament_target_dependencies(joystic_servo_node
+  rclcpp
+  sensor_msgs
+  geometry_msgs
+  control_msgs
+  std_srvs
+  moveit_msgs
+  igus_rebel_msgs
+)
+
+# Install the executable
+install(TARGETS joystic_servo_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 # Install package folders
 install(DIRECTORY
   config
