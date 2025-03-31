@@ -177,7 +177,7 @@ def opaque_func(context, *args, **kwargs):
     servo_node = Node(
         condition=IfCondition(LaunchConfiguration('use_servo')),
         package='moveit_servo',
-        executable='servo_node_main',
+        executable='servo_node',
         parameters=[
             servo_params,
             {'robot_description': robot_description},
@@ -189,8 +189,8 @@ def opaque_func(context, *args, **kwargs):
     
     return [
         move_group_node,
-        launch_rviz,
-        servo_node
+        servo_node,
+        launch_rviz
     ]
 
 
