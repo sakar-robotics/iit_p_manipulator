@@ -233,11 +233,11 @@ int KeyboardServo::keyLoop()
         auto twist_msg = std::make_unique<geometry_msgs::msg::TwistStamped>();
         auto joint_msg = std::make_unique<control_msgs::msg::JointJog>();
 
-        joint_msg->joint_names.resize(7);
+        joint_msg->joint_names.resize(6);
         joint_msg->joint_names = {"joint1", "joint2", "joint3", "joint4",
-                                  "joint5", "joint6", "joint7"};
+                                  "joint5", "joint6"};
 
-        joint_msg->velocities.resize(7);
+        joint_msg->velocities.resize(6);
         std::fill(joint_msg->velocities.begin(), joint_msg->velocities.end(), 0.0);
         // Use read key-press
         switch (c)

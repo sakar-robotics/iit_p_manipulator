@@ -118,7 +118,7 @@ def opaque_func(context, *args, **kwargs):
         ]
     )
     servo_config = load_yaml(Path(servo_file.perform(context)))
-    servo_params = {'moveit_servo': servo_config}
+    # servo_params = {'moveit_servo': servo_config}
 
     moveit_args_not_concatenated = [
         {"robot_description": robot_description.perform(context)},
@@ -137,10 +137,21 @@ def opaque_func(context, *args, **kwargs):
         ompl_context,
     ]
 
+    servo_args_not_concatenated = [
+        {"robot_description": robot_description.perform(context)},
+        {"robot_description_semantic": robot_description_semantic.perform(context)},
+        {"robot_description_kinematics": kinematics_config},
+        {"robot_description_planning": joint_limits_config},
+        {"moveit_servo": servo_config},
+    ]
+
     # Concatenate all dictionaries together, else moveitpy won't read all parameters
     moveit_args = dict()
     for d in moveit_args_not_concatenated:
         moveit_args.update(d)
+    servo_args = dict()
+    for d in servo_args_not_concatenated:
+        servo_args.update(d)
                         
     move_group_node = Node(
         package="moveit_ros_move_group",
@@ -179,10 +190,8 @@ def opaque_func(context, *args, **kwargs):
         package='moveit_servo',
         executable='servo_node',
         parameters=[
-            servo_params,
-            {'robot_description': robot_description},
-            {'robot_description_semantic': robot_description_semantic.perform(context)},
-            kinematics_config,
+            {'use_sim_time': use_sim_time},
+            servo_args,
         ],
         output='screen'
     )

@@ -37,13 +37,14 @@ smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
 # which other nodes can use as a source for information about the planning environment.
 # NOTE: If a different node in your system is responsible for the "primary" planning scene instance (e.g. the MoveGroup node),
 # then is_primary_planning_scene_monitor needs to be set to false.
-is_primary_planning_scene_monitor: true
+is_primary_planning_scene_monitor: false
 check_octomap_collisions: false # Check collision against the octomap (if a 3D sensor plugin is available)
 
 ## Other frames
 ee_frame_name: link6 # The name of the end effector link, used to return the EE pose
 robot_link_command_frame: link6 # commands must be given in the frame of a robot link. Usually either the base or end effector
 planning_frame: base_link # The frame in which the robot's planning scene is defined. Usually the base link.
+# planning_group_name: igus_rebel_arm
 
 ## Stopping behaviour
 incoming_command_timeout: 0.1 # Stop servoing if X seconds elapse without a new command
