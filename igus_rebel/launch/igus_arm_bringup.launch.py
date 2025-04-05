@@ -6,7 +6,7 @@ from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch.substitutions import PathJoinSubstitution
+from launch.substitutions import PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -19,7 +19,7 @@ ARGUMENTS = [
     DeclareLaunchArgument(
         'servo_control',
         default_value='joystick',
-        choices=['joystick', 'keyboard'],
+        choices=['joystick', 'keyboard', 'none'],
         description='Control method for the robot when using moveit servo'),
     DeclareLaunchArgument(
         "launch_mode",
@@ -61,8 +61,31 @@ def generate_launch_description():
         ],
     )
 
+    joystick_control_servo = Node(
+        package='igus_rebel',
+        executable='joystick_servo',
+        name='joystick_servo',
+        output='screen',
+        condition=IfCondition(
+            PythonExpression(["'", servo_control, "' == 'joystick'"])
+        ),
+    )
+
+    keyboard_control_servo = Node(
+        package='igus_rebel',
+        executable='keyboard_input',
+        name='keyboard_input',
+        output='screen',
+        condition=IfCondition(
+            PythonExpression(["'", servo_control, "' == 'keyboard'"])
+        ),
+    )
+
     ld = LaunchDescription(ARGUMENTS)
     # Launch
     ld.add_action(rebel_launch)
     ld.add_action(motion_planner_launch)
+    # Nodes
+    ld.add_action(joystick_control_servo)
+    ld.add_action(keyboard_control_servo)
     return ld
