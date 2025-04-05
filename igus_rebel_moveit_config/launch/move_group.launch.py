@@ -15,6 +15,7 @@ from launch.substitutions import (
     FindExecutable,
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression
 )
 from launch_param_builder import load_yaml
 from launch_ros.actions import Node
@@ -25,6 +26,7 @@ def opaque_func(context, *args, **kwargs):
     namespace = LaunchConfiguration("namespace")
     hardware_protocol = LaunchConfiguration('hardware_protocol')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    launch_mode = LaunchConfiguration('launch_mode')
 
     joint_limits_file = PathJoinSubstitution(
         [
@@ -142,7 +144,16 @@ def opaque_func(context, *args, **kwargs):
         {"robot_description_semantic": robot_description_semantic.perform(context)},
         {"robot_description_kinematics": kinematics_config},
         {"robot_description_planning": joint_limits_config},
-        {"moveit_servo": servo_config},
+        # {"moveit_servo": servo_config},
+        {
+        "moveit_servo": {
+            **servo_config,
+            "is_primary_planning_scene_monitor": PythonExpression(
+                ["'", launch_mode, "' == 'servo'"]
+            ),
+        }
+    },
+
     ]
 
     # Concatenate all dictionaries together, else moveitpy won't read all parameters
@@ -161,6 +172,9 @@ def opaque_func(context, *args, **kwargs):
             {'use_sim_time': use_sim_time},
             moveit_args,
         ],
+        condition=IfCondition(
+        PythonExpression(["'", launch_mode, "' == 'move_group' or '", launch_mode, "' == 'both'"])
+        )
     )
     
     default_rviz_file = os.path.join(
@@ -186,13 +200,15 @@ def opaque_func(context, *args, **kwargs):
     )
 
     servo_node = Node(
-        condition=IfCondition(LaunchConfiguration('use_servo')),
         package='moveit_servo',
         executable='servo_node',
         parameters=[
             {'use_sim_time': use_sim_time},
             servo_args,
         ],
+        condition=IfCondition(
+        PythonExpression(["'", launch_mode, "' == 'servo' or '", launch_mode, "' == 'both'"])
+        ),
         output='screen'
     )
     
@@ -220,10 +236,11 @@ def generate_launch_description():
         description="Which hardware protocol or mock hardware should be used",
     )
 
-    use_servo_arg = DeclareLaunchArgument(
-        "use_servo", 
-        default_value="true",
-        description="Enable moveit_servo node if true"
+    launch_mode_arg = DeclareLaunchArgument(
+        "launch_mode",
+        default_value="both",
+        choices=["move_group", "servo", "both"],
+        description="Specify which nodes to launch: move_group, servo, or both",
     )
 
     ld = LaunchDescription()
@@ -231,7 +248,7 @@ def generate_launch_description():
     ld.add_action(namespace_arg)
     ld.add_action(use_gui_arg)
     ld.add_action(hardware_protocol_arg)
-    ld.add_action(use_servo_arg)
+    ld.add_action(launch_mode_arg)
 
     ld.add_action(OpaqueFunction(function=opaque_func))
 

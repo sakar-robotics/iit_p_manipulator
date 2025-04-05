@@ -1,55 +1,114 @@
-import launch
-from launch_ros.actions import Node
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, LogInfo
-from launch.substitutions import LaunchConfiguration
-
 import os
 from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from pathlib import Path
+from launch.substitutions import Command, PathJoinSubstitution, FindExecutable
+from launch_param_builder import load_yaml
 
-def generate_launch_description():
+def opaque_func(context, *args, **kwargs):
+    # Load parameters from move_group.launch.py
+    hardware_protocol = LaunchConfiguration('hardware_protocol')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    robot_description_file = PathJoinSubstitution(
+        [
+            get_package_share_directory("igus_rebel_description"),
+            "urdf",
+            "igus_rebel_robot2.urdf.xacro",
+        ]
+    )
+    robot_description = Command(
+        [
+            FindExecutable(name="xacro"),
+            " ",
+            robot_description_file,
+            " hardware_protocol:=",
+            hardware_protocol,
+        ]
+    )
+
+    robot_description_semantic_file = PathJoinSubstitution(
+        [
+            get_package_share_directory("igus_rebel_moveit_config"),
+            "config",
+            "igus_rebel2.srdf",
+        ]
+    )
+    robot_description_semantic = Command(
+        [
+            FindExecutable(name="cat"),
+            " ",
+            robot_description_semantic_file,
+        ]
+    )
+
+    kinematics_file = PathJoinSubstitution(
+        [
+            get_package_share_directory("igus_rebel_moveit_config"),
+            "config",
+            "kinematics.yaml",
+        ]
+    )
+    kinematics_config = load_yaml(Path(kinematics_file.perform(context)))
+
+    joint_limits_file = PathJoinSubstitution(
+        [
+            get_package_share_directory("igus_rebel_moveit_config"),
+            "config",
+            "joint_limits.yaml",
+        ]
+    )
+    joint_limits_config = load_yaml(Path(joint_limits_file.perform(context)))
+
     default_rviz_file = os.path.join(
         get_package_share_directory('igus_rebel_moveit_config'),
         'launch',
         'moveit.rviz'
     )
-    return LaunchDescription([
-        DeclareLaunchArgument('debug', default_value='false', description='Enable debugging'),
-        DeclareLaunchArgument('rviz_config', default_value=default_rviz_file, description='Path to RViz config file'),
-        DeclareLaunchArgument(
-            'use_sim_time', 
-            default_value='false', 
-            description='Use sim time if true'),
 
-        # Determine launch prefix based on debug flag
-        DeclareLaunchArgument(
-            'launch_prefix', 
-            default_value='',
-            condition=launch.conditions.LaunchConfigurationEquals('debug', 'false'),
-            description='Prefix for launching nodes (default is empty)'),
+    rviz_parameters = [
+        {'robot_description': robot_description.perform(context)},
+        {'robot_description_semantic': robot_description_semantic.perform(context)},
+        {'robot_description_kinematics': kinematics_config},
+        {'robot_description_planning': joint_limits_config},
+        {'use_sim_time': use_sim_time},
+    ]
 
-        DeclareLaunchArgument(
-            'launch_prefix', 
-            default_value='gdb --ex run --args',
-            condition=launch.conditions.LaunchConfigurationEquals('debug', 'true'),
-            description='Prefix for launching nodes with gdb'),
+    # Define the RViz node
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=["-d", default_rviz_file],
+        parameters=rviz_parameters,
+    )
 
-        # Set arguments for RViz node
-        DeclareLaunchArgument(
-            'command_args',
-            default_value='',
-            condition=launch.conditions.LaunchConfigurationEquals('rviz_config', ''),
-            description='Command arguments for RViz'),
+    return [rviz_node]
 
-        # Start RViz node with the arguments set above
-        Node(
-            package="rviz2",
-            executable="rviz2",
-            name="rviz2",
-            output='screen',
-            parameters=[{
-                "use_sim_time": LaunchConfiguration('use_sim_time'),
-            }],
-            arguments=["--display-config", LaunchConfiguration('rviz_config')]
-        ),
-    ])
+
+def generate_launch_description():
+    # Declare arguments
+    hardware_protocol_arg = DeclareLaunchArgument(
+        "hardware_protocol",
+        default_value="rebel",
+        choices=["mock_hardware", "gazebo", "rebel"],
+        description="Which hardware protocol or mock hardware should be used",
+    )
+
+    use_sim_time_arg = DeclareLaunchArgument(
+        "use_sim_time",
+        default_value="false",
+        description="Use sim time if true",
+    )
+
+    # Build the launch description
+    ld = LaunchDescription()
+    ld.add_action(hardware_protocol_arg)
+    ld.add_action(use_sim_time_arg)
+    ld.add_action(OpaqueFunction(function=opaque_func))
+
+    return ld
