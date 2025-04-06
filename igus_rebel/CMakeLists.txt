@@ -89,6 +89,23 @@ ament_target_dependencies(keyboard_input_node
 # Install the keyboard_input executable
 install(TARGETS keyboard_input_node
   DESTINATION lib/${PROJECT_NAME})
+
+# Add executable target for the joystick_input node
+add_executable(joystick_input_node src/joystick_input.cpp)
+
+ament_target_dependencies(joystick_input_node
+  rclcpp
+  sensor_msgs
+  geometry_msgs
+  control_msgs
+  moveit_msgs
+)
+
+# Install the joystick_input executable
+install(TARGETS joystick_input_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Install package folders
 install(DIRECTORY
   config
