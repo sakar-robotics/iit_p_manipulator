@@ -55,6 +55,7 @@
 #include <vector>
 
 #include "control_msgs/msg/joint_jog.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "moveit_msgs/srv/servo_command_type.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -63,9 +64,10 @@
 //------------------ Configuration Section ------------------//
 
 // Topics
-const std::string JOY_TOPIC   = "/joy/arm";
+const std::string JOY_TOPIC   = "/joy";
 const std::string TWIST_TOPIC = "/servo_node/delta_twist_cmds";
 const std::string JOINT_TOPIC = "/servo_node/delta_joint_cmds";
+const std::string POSE_TOPIC  = "/servo_node/pose_target_cmds";
 
 // Frame IDs
 const std::string PLANNING_FRAME_ID = "base_link";
@@ -83,11 +85,11 @@ enum Axis
 {
   LEFT_STICK_X  = 0,  // used in twist mode for linear y
   LEFT_STICK_Y  = 1,  // used in twist mode for linear z
-  RIGHT_STICK_X = 2,  // used in twist mode for angular z
-  RIGHT_STICK_Y = 5,  // used in twist mode for angular y
+  RIGHT_STICK_X = 3,  // used in twist mode for angular z
+  RIGHT_STICK_Y = 4,  // used in twist mode for angular y
   // Triggers
-  LEFT_TRIGGER  = 4,   // used in twist mode for angular x control
-  RIGHT_TRIGGER = 10,  // used in twist mode for angular x control
+  LEFT_TRIGGER  = 2,  // used in twist mode for angular x control
+  RIGHT_TRIGGER = 5,  // used in twist mode for angular x control
   // D-Pad: these axes act as buttons
   D_PAD_X = 6,
   D_PAD_Y = 7
@@ -103,22 +105,22 @@ enum Button
   BTN_Y            = 3,  // Joint Jog: Control for Joint 6
   BTN_LEFT_BUMPER  = 4,  // Twist mode: Linear x positive (rising edge)
   BTN_RIGHT_BUMPER = 5,  // Twist mode: Linear x negative (rising edge)
-  BTN_CHANGE_VIEW  = 6,  // Joint Jog: Toggle reverse direction
+  BTN_CHANGE_VIEW  = 8,  // Joint Jog: Toggle reverse direction
   // Unused button index 7 can be assigned as needed
-  BTN_HOME        = 8,  // Joint Jog: Home position for all joints
-  BTN_LEFT_STICK  = 9,  // Twist mode: Set command frame to Planning frame
-  BTN_RIGHT_STICK = 10  // Twist mode: Set command frame to End-Effector frame
+  BTN_HOME        = 10,  // Joint Jog: Home position for all joints
+  BTN_LEFT_STICK  = 11,  // Twist mode: Set command frame to Planning frame
+  BTN_RIGHT_STICK = 12   // Twist mode: Set command frame to End-Effector frame
 };
 
 // Threshold for considering an axis (e.g., D-pad) pressed as a button.
 const double AXIS_THRESHOLD = 0.5;
 
 // Scaling factors for twist mode.
-const double LINEAR_SCALE  = 0.5;  // scale for linear velocities
-const double ANGULAR_SCALE = 0.5;  // scale for angular velocities
+const double LINEAR_SCALE  = 0.02;  // scale for linear velocities
+const double ANGULAR_SCALE = 0.05;  // scale for angular velocities
 
 // Joint velocity command value (base value, will be multiplied by reverse factor).
-const double JOINT_VEL_CMD = 1.0;
+const double JOINT_VEL_CMD = 1.5;
 
 //------------------ End Configuration ------------------//
 
@@ -126,7 +128,8 @@ const double JOINT_VEL_CMD = 1.0;
 enum class ControlMode
 {
   TWIST,
-  JOINT_JOG
+  JOINT_JOG,
+  POSE
 };
 
 class JoystickServo : public rclcpp::Node
@@ -138,10 +141,11 @@ public:
     , reverse_multiplier_(1.0)
     , command_frame_id_(PLANNING_FRAME_ID)
   {
-    // Initialize publishers for twist and joint jog commands.
+    // Initialize publishers for twist, joint jog and pose commands
     twist_pub_ =
       this->create_publisher<geometry_msgs::msg::TwistStamped>(TWIST_TOPIC, ROS_QUEUE_SIZE);
     joint_pub_ = this->create_publisher<control_msgs::msg::JointJog>(JOINT_TOPIC, ROS_QUEUE_SIZE);
+    pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(POSE_TOPIC, ROS_QUEUE_SIZE);
 
     // Create a client for switching the servo command type.
     switch_input_client_ = this->create_client<moveit_msgs::srv::ServoCommandType>("servo_node/"
@@ -175,15 +179,47 @@ private:
     // Process based on current control mode.
     if (control_mode_ == ControlMode::TWIST) {
       processTwistMode(msg);
-    } else  // Joint Jog mode
-    {
+    } else if (control_mode_ == ControlMode::JOINT_JOG) {
       processJointJogMode(msg);
+    }
+
+    // Send home pose
+    if (isRisingEdge(msg->buttons, BTN_HOME)) {
+      sendHomePose();
     }
 
     // Update previous button states and d-pad axes values.
     prev_buttons_ = msg->buttons;
     prev_dpad_x_  = msg->axes[D_PAD_X];
     prev_dpad_y_  = msg->axes[D_PAD_Y];
+  }
+
+  void sendHomePose()
+  {
+    RCLCPP_INFO(this->get_logger(),
+                "Home button pressed: Switching to POSE mode and sending home pose.");
+
+    // Switch input type to POSE.
+    switchControlMode(ControlMode::POSE);
+
+    // Add a small delay to ensure the mode switch is processed before sending the pose.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));  // 1.5 seconds delay
+
+    // Publish the home pose.
+    geometry_msgs::msg::PoseStamped home_pose_;
+
+    // Initialize fixed home pose.
+    home_pose_.header.stamp       = this->now();
+    home_pose_.header.frame_id    = PLANNING_FRAME_ID;  // Adjust if needed.
+    home_pose_.pose.position.x    = 0.3;                // Set desired x.
+    home_pose_.pose.position.y    = 0.0;                // Set desired y.
+    home_pose_.pose.position.z    = 0.4;                // Set desired z.
+    home_pose_.pose.orientation.w = 1.0;
+    home_pose_.pose.orientation.x = 0.0;
+    home_pose_.pose.orientation.y = 0.0;
+    home_pose_.pose.orientation.z = 0.0;
+
+    pose_pub_->publish(home_pose_);
   }
 
   // Process Twist Mode commands.
@@ -199,11 +235,10 @@ private:
     twist_msg->twist.linear.y = msg->axes[LEFT_STICK_X] * LINEAR_SCALE;
     twist_msg->twist.linear.z = msg->axes[LEFT_STICK_Y] * LINEAR_SCALE;
 
-    // Left and Right Bumpers control linear x on rising edge.
-    double linear_x = 0.0;
-    if (isRisingEdge(msg->buttons, BTN_LEFT_BUMPER)) linear_x += LINEAR_SCALE;   // positive x
-    if (isRisingEdge(msg->buttons, BTN_RIGHT_BUMPER)) linear_x -= LINEAR_SCALE;  // negative x
-    twist_msg->twist.linear.x = linear_x;
+    // Left and Right bumpers control linear x left button gives a fixed negative linear x and
+    // button right gives fixed positive linear x.
+    twist_msg->twist.linear.x =
+      (msg->buttons[BTN_RIGHT_BUMPER] - msg->buttons[BTN_LEFT_BUMPER]) * LINEAR_SCALE;
 
     // Right Stick: axis 2 -> angular z, axis 5 -> angular y.
     twist_msg->twist.angular.z = msg->axes[RIGHT_STICK_X] * ANGULAR_SCALE;
@@ -294,11 +329,12 @@ private:
       RCLCPP_INFO(this->get_logger(), "Joint Jog Mode: Triggering Joint 6");
     }
 
-    // Home Command: Set all joints to home position.
-    // When BTN_HOME is pressed, send a command with zero velocities as an example.
-    if (isRisingEdge(msg->buttons, BTN_HOME)) {
-      RCLCPP_INFO(this->get_logger(), "Joint Jog Mode: Home command triggered.");
-      joint_msg->velocities.assign(6, 0.0);
+    // Stop all joints
+    // When BTN is pressed, send a command with zero velocities
+    if (isRisingEdge(msg->buttons, BTN_B)) {
+      RCLCPP_INFO(this->get_logger(), "Joint Jog Mode: Stops");
+      joint_msg->displacements.assign(6, 1.0);
+      // joint_msg->velocities.assign(6, 0.0);
       joint_pub_->publish(std::move(joint_msg));
       return;  // Skip further processing for this callback.
     }
@@ -337,24 +373,26 @@ private:
     if (control_mode_ == ControlMode::TWIST) {
       request->command_type = moveit_msgs::srv::ServoCommandType::Request::TWIST;
       RCLCPP_INFO(this->get_logger(), "Switched to TWIST mode.");
-    } else  // JOINT_JOG
-    {
+    } else if (control_mode_ == ControlMode::JOINT_JOG) {
       request->command_type = moveit_msgs::srv::ServoCommandType::Request::JOINT_JOG;
       RCLCPP_INFO(this->get_logger(), "Switched to JOINT_JOG mode.");
+    } else {
+      request->command_type = moveit_msgs::srv::ServoCommandType::Request::POSE;
+      RCLCPP_INFO(this->get_logger(), "Switched to POSE mode.");
     }
     if (switch_input_client_->wait_for_service(std::chrono::seconds(1))) {
       auto result_future = switch_input_client_->async_send_request(request);
-      // In production, consider waiting on the future or checking result.
+      // BUG: Blocks the code flow.
 
-      if (result_future.get()->success) {
-        RCLCPP_INFO(this->get_logger(),
-                    "Successfully switched input type to %s.",
-                    control_mode_ == ControlMode::TWIST ? "TWIST" : "JOINT_JOG");
-      } else {
-        RCLCPP_WARN(this->get_logger(),
-                    "Could not switch input type to %s.",
-                    control_mode_ == ControlMode::TWIST ? "TWIST" : "JOINT_JOG");
-      }
+      // if (result_future.get()->success) {
+      //   RCLCPP_INFO(this->get_logger(),
+      //               "Successfully switched input type to %s.",
+      //               control_mode_ == ControlMode::TWIST ? "TWIST" : "JOINT_JOG");
+      // } else {
+      //   RCLCPP_WARN(this->get_logger(),
+      //               "Could not switch input type to %s.",
+      //               control_mode_ == ControlMode::TWIST ? "TWIST" : "JOINT_JOG");
+      // }
 
     } else {
       RCLCPP_WARN(this->get_logger(), "Switch input service not available.");
@@ -364,6 +402,7 @@ private:
   // Publishers and client.
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr twist_pub_;
   rclcpp::Publisher<control_msgs::msg::JointJog>::SharedPtr joint_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
   rclcpp::Client<moveit_msgs::srv::ServoCommandType>::SharedPtr switch_input_client_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
 

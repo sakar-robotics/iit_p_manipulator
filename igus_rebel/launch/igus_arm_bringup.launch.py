@@ -18,12 +18,12 @@ ARGUMENTS = [
         description='Use MoveIt RViz'),
     DeclareLaunchArgument(
         'servo_control',
-        default_value='joystick',
+        default_value='none',
         choices=['joystick', 'keyboard', 'none'],
         description='Control method for the robot when using moveit servo'),
     DeclareLaunchArgument(
         "launch_mode",
-        default_value="move_group",
+        default_value="both",
         choices=["move_group", "servo", "both"],
         description="Specify which nodes to launch: move_group, servo, or both.",
     )
