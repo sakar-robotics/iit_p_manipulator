@@ -59,24 +59,6 @@ install(FILES
   DESTINATION share/${PROJECT_NAME}
 )
 
-# Add executable target for the joystic_servo node
-add_executable(joystic_servo_node src/joystic_servo.cpp)
-
-ament_target_dependencies(joystic_servo_node
-  rclcpp
-  sensor_msgs
-  geometry_msgs
-  control_msgs
-  std_srvs
-  moveit_msgs
-  igus_rebel_msgs
-)
-
-# Install the executable
-install(TARGETS joystic_servo_node
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # Add executable target for the keyboard_input node
 add_executable(keyboard_input_node src/keyboard_input.cpp)
 

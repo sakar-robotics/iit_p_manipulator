@@ -64,7 +64,7 @@ def generate_launch_description():
     joystick_control_servo = Node(
         package='igus_rebel',
         executable='joystick_servo',
-        name='joystick_servo',
+        name='joystick_input_node',
         output='screen',
         condition=IfCondition(
             PythonExpression(["'", servo_control, "' == 'joystick'"])
@@ -74,7 +74,7 @@ def generate_launch_description():
     keyboard_control_servo = Node(
         package='igus_rebel',
         executable='keyboard_input',
-        name='keyboard_input',
+        name='keyboard_input_node',
         output='screen',
         condition=IfCondition(
             PythonExpression(["'", servo_control, "' == 'keyboard'"])
