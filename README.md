@@ -97,6 +97,15 @@ This repository provides several launch files and scripts to bring up the roboti
     - **Joystick Input (joystick_input)**:  
       Allows intuitive, continuous control using a joystick.
   
+- **Service for Digital Output Control**:  
+  The robotic arm exposes a service to set the digital output pins to high or low. This can be called using the following command:
+
+  ```bash
+  ros2 service call /set_digital_output igus_rebel_msgs/srv/SetDigitalOutput "{output: {output: 26, is_on: True}}"
+  ```
+
+  Replace `26` with the desired output pin number and set `is_on` to `True` or `False` to control the pin state.
+
 - **Usage Overview**:  
   To run the system:
   1. Launch the main bringup file (`igus_arm_bringup.launch.py`). Adjust launch arguments to choose components:

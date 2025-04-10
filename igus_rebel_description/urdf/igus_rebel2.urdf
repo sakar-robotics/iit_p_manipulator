@@ -672,4 +672,71 @@
       damping="0.0"
       friction="0.0" />
   </joint>
+
+  <!-- GRIPPER  -->
+
+  <joint name="gripper_link6_joint" type="fixed">
+    <parent link="link6" />
+    <child link="gripper_base" />
+    <origin rpy="0 0 0.0" xyz="0 0 0" />
+  </joint>
+  <link name="gripper_base">
+    <visual>
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/gripper_base.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/gripper_base.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="gripper_leftfinger">
+    <visual>
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/finger_left.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/finger_left.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="gripper_rightfinger">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/finger_right.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="file://$(find igus_rebel_description)/meshes/finger_right.stl"
+          scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="gripper_leftfinger_joint" type="fixed">
+    <parent link="gripper_base" />
+    <child link="gripper_leftfinger" />
+    <origin rpy="0 0 0" xyz="0.0955 0 0.01169" />
+    <!-- <axis xyz="0 1 0" /> -->
+    <!-- <limit effort="20" lower="0.0" upper="0.04" velocity="0.2" /> -->
+  </joint>
+  <joint name="gripper_rightfinger_joint" type="fixed">
+    <parent link="gripper_base" />
+    <child link="gripper_rightfinger" />
+    <origin rpy="0 0 0" xyz="-0.0955 0 0.01169" />
+    <!-- <axis xyz="0 -1 0" /> -->
+    <!-- <limit effort="20" lower="0.0" upper="0.04" velocity="0.2" /> -->
+    <!-- <mimic joint="gripper_leftfinger_joint" /> -->
+  </joint>
 </robot>
